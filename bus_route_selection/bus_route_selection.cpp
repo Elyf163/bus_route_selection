@@ -8,19 +8,18 @@
 #include <QFormLayout>
 #include <QInputDialog>
 #include <QRegularExpression>
-#include <QPixmap> // 引入图片处理库
+#include <QPixmap>
+#include <QIcon>
 
-// --- 全局样式定义 ---
-// 这里定义了白色背景和深蓝色边框的风格
+// --- 全局样式 (保持不变) ---
 const QString GLOBAL_STYLE = R"(
     QMainWindow, QWidget {
-        background-color: #FFFFFF; /* 全局白底 */
-        color: #333333;            /* 字体深灰 */
+        background-color: #FFFFFF;
+        color: #333333;
         font-family: "Microsoft YaHei", Arial;
     }
-    /* 按钮样式 */
     QPushButton {
-        border: 2px solid #003366; /* 深蓝色边框 */
+        border: 2px solid #003366;
         border-radius: 6px;
         padding: 8px 15px;
         background-color: #FFFFFF;
@@ -28,20 +27,18 @@ const QString GLOBAL_STYLE = R"(
         font-weight: bold;
     }
     QPushButton:hover {
-        background-color: #E6F0FF; /* 鼠标悬停变浅蓝 */
+        background-color: #E6F0FF;
     }
     QPushButton:pressed {
         background-color: #003366;
         color: white;
     }
-    /* 输入框样式 */
     QLineEdit {
         border: 2px solid #003366;
         border-radius: 4px;
         padding: 5px;
         selection-background-color: #003366;
     }
-    /* 分组框样式 */
     QGroupBox {
         border: 2px solid #003366;
         border-radius: 6px;
@@ -59,16 +56,81 @@ const QString GLOBAL_STYLE = R"(
 bus_route_selection::bus_route_selection(QWidget* parent)
     : QMainWindow(parent)
 {
-    // 应用全局样式
     this->setStyleSheet(GLOBAL_STYLE);
+
+    // 1. 先初始化音频系统
+    initAudio();
+
+    // 2. 构建界面 (包含悬浮按钮的创建)
     setupUi();
-    resize(900, 700); // 稍微调大窗口以适应图片
+
+    resize(900, 700);
+
+    // 3. 默认开启背景音乐
+    playBackgroundMusic();
 }
 
 bus_route_selection::~bus_route_selection()
 {
 }
 
+// --- 音频系统初始化 ---
+void bus_route_selection::initAudio() {
+    // 配置 BGM
+    m_bgmPlayer = new QMediaPlayer(this);
+    m_bgmOutput = new QAudioOutput(this);
+    m_bgmPlayer->setAudioOutput(m_bgmOutput);
+    m_bgmOutput->setVolume(0.3); // 背景音乐音量小一点
+    m_bgmPlayer->setLoops(QMediaPlayer::Infinite); // 无限循环
+
+    // TODO: 请替换为背景音乐的绝对路径
+    m_bgmPlayer->setSource(QUrl::fromLocalFile("E:/B24011015/soft_design/audio/Background_Fragments.mp3"));
+
+    // 配置 语音
+    m_voicePlayer = new QMediaPlayer(this);
+    m_voiceOutput = new QAudioOutput(this);
+    m_voicePlayer->setAudioOutput(m_voiceOutput);
+    m_voiceOutput->setVolume(1.0); // 语音音量最大
+
+    m_isMusicOn = true; // 默认状态
+}
+
+void bus_route_selection::playBackgroundMusic() {
+    if (m_isMusicOn && m_bgmPlayer->playbackState() != QMediaPlayer::PlayingState) {
+        m_bgmPlayer->play();
+    }
+}
+
+void bus_route_selection::stopBackgroundMusic() {
+    m_bgmPlayer->pause();
+}
+
+void bus_route_selection::toggleBgm() {
+    m_isMusicOn = !m_isMusicOn;
+
+    if (m_isMusicOn) {
+        // 开启音乐
+        m_bgmPlayer->play();
+        // TODO: 请替换为“音乐开启”图标路径
+        m_musicBtn->setIcon(QIcon("E:/B24011015/soft_design/music_on.png"));
+        m_musicBtn->setToolTip("关闭背景音乐");
+    }
+    else {
+        // 关闭音乐
+        m_bgmPlayer->pause();
+        // TODO: 请替换为“音乐关闭”图标路径
+        m_musicBtn->setIcon(QIcon("E:/B24011015/soft_design/music_off.png"));
+        m_musicBtn->setToolTip("开启背景音乐");
+    }
+}
+
+void bus_route_selection::playVoice(const QString& filePath) {
+    m_voicePlayer->stop();
+    m_voicePlayer->setSource(QUrl::fromLocalFile(filePath));
+    m_voicePlayer->play();
+}
+
+// --- 界面构建 ---
 void bus_route_selection::setupUi() {
     stackedWidget = new QStackedWidget(this);
     setCentralWidget(stackedWidget);
@@ -84,23 +146,50 @@ void bus_route_selection::setupUi() {
     stackedWidget->addWidget(adminPage);
 
     stackedWidget->setCurrentWidget(selectionPage);
+
+    // --- 创建右下角悬浮音乐按钮 ---
+    // 注意：这里父对象设为 this (QMainWindow)，而不是 stackedWidget
+    m_musicBtn = new QPushButton(this);
+    m_musicBtn->setFixedSize(50, 50);
+    // 设置初始图标 (TODO: 替换路径)
+    m_musicBtn->setIcon(QIcon("E:/B24011015/soft_design/music_on.png"));
+    m_musicBtn->setIconSize(QSize(30, 30));
+    m_musicBtn->setCursor(Qt::PointingHandCursor);
+    m_musicBtn->setToolTip("背景音乐开关");
+    // 设置圆形样式
+    m_musicBtn->setStyleSheet(
+        "QPushButton { "
+        "   background-color: #E6F7FF; "
+        "   border: 2px solid #003366; "
+        "   border-radius: 25px; " // 半径为宽高的一半，即圆形
+        "}"
+        "QPushButton:hover { background-color: #BAE7FF; }"
+    );
+
+    connect(m_musicBtn, &QPushButton::clicked, this, &bus_route_selection::toggleBgm);
 }
 
-// --- 1. 身份选择界面 (包含正方形校徽) ---
+// --- 核心：重写 resizeEvent 以固定按钮位置 ---
+void bus_route_selection::resizeEvent(QResizeEvent* event) {
+    QMainWindow::resizeEvent(event);
+
+    // 计算位置：右下角，距离右边和底部各 20 像素
+    int x = this->width() - m_musicBtn->width() - 20;
+    int y = this->height() - m_musicBtn->height() - 20;
+
+    m_musicBtn->move(x, y);
+    m_musicBtn->raise(); // 确保按钮在最上层
+}
+
+// ... setupSelectionUi, setupLoginUi 等保持原有逻辑 ...
 void bus_route_selection::setupSelectionUi() {
     selectionPage = new QWidget();
     QVBoxLayout* layout = new QVBoxLayout(selectionPage);
 
-    // [图片区域] 正方形校徽
     QLabel* logoLabel = new QLabel();
-    logoLabel->setFixedSize(150, 150); // 设置固定正方形大小
-    // *** 请修改下面的路径 ***
+    logoLabel->setFixedSize(150, 150);
     QPixmap logoPix("E:/B24011015/soft_design/school_badge.png");
-    if (logoPix.isNull()) {
-        logoLabel->setText("图片加载失败\n(请检查代码路径)");
-        logoLabel->setStyleSheet("border: 2px dashed #003366; color: #999;");
-    }
-    else {
+    if (!logoPix.isNull()) {
         logoLabel->setPixmap(logoPix.scaled(150, 150, Qt::KeepAspectRatio, Qt::SmoothTransformation));
     }
     logoLabel->setAlignment(Qt::AlignCenter);
@@ -120,7 +209,7 @@ void bus_route_selection::setupSelectionUi() {
     connect(btnAdmin, &QPushButton::clicked, this, &bus_route_selection::showAdminLoginPage);
 
     layout->addStretch();
-    layout->addWidget(logoLabel, 0, Qt::AlignCenter); // 插入图片
+    layout->addWidget(logoLabel, 0, Qt::AlignCenter);
     layout->addWidget(title);
     layout->addSpacing(40);
     layout->addWidget(btnUser);
@@ -129,14 +218,14 @@ void bus_route_selection::setupSelectionUi() {
     layout->setContentsMargins(200, 50, 200, 50);
 }
 
-// --- 2. 登录界面 ---
 void bus_route_selection::setupLoginUi() {
+    // 保持原有代码，无需修改
     loginPage = new QWidget();
     QVBoxLayout* layout = new QVBoxLayout(loginPage);
 
     QHBoxLayout* topLayout = new QHBoxLayout();
     QPushButton* backBtn = new QPushButton("<< 返回");
-    backBtn->setFixedSize(120,35);
+    backBtn->setFixedSize(120, 35);
     backBtn->setStyleSheet("border: none; color: #003366; text-align: left; font-weight: normal;");
     connect(backBtn, &QPushButton::clicked, this, &bus_route_selection::showSelectionPage);
     topLayout->addWidget(backBtn);
@@ -198,12 +287,15 @@ void bus_route_selection::showAdminLoginPage() {
     stackedWidget->setCurrentWidget(loginPage);
 }
 
+// --- 登录处理 (添加语音播报) ---
 void bus_route_selection::handleLogin() {
     QString user = userEdit->text().trimmed();
     QString pass = passEdit->text().trimmed();
 
     if (m_isAdminLogin) {
         if (user == ADMIN_USER && pass == ADMIN_PASS) {
+            // 管理员登录成功语音 (TODO: 替换路径)
+            playVoice("E:/B24011015/soft_design/audio/admin_window.mp3");
             showAdminPanel();
         }
         else {
@@ -213,6 +305,8 @@ void bus_route_selection::handleLogin() {
     else {
         QRegularExpression regex("^[0-9]{6}$");
         if (regex.match(user).hasMatch() && regex.match(pass).hasMatch()) {
+            // 普通用户登录成功语音 (TODO: 替换路径)
+            playVoice("E:/B24011015/soft_design/audio/user_window.mp3");
             showUserPanel();
         }
         else {
@@ -222,6 +316,7 @@ void bus_route_selection::handleLogin() {
 }
 
 void bus_route_selection::handleForgotPwd() {
+    // 保持原有代码
     bool ok;
     QString code = QInputDialog::getText(this, "找回密码",
         "请输入找回码 (Recovery Code):",
@@ -237,29 +332,23 @@ void bus_route_selection::handleForgotPwd() {
     }
 }
 
-// --- 3. 用户功能界面 (包含长条横幅) ---
 void bus_route_selection::setupUserUi() {
+    // 保持原有代码
     userPage = new QWidget();
     QVBoxLayout* mainLayout = new QVBoxLayout(userPage);
 
-    // [图片区域] 顶部横幅 (Logo + 学校名称)
     QLabel* bannerLabel = new QLabel();
-    bannerLabel->setFixedHeight(110); // 限制高度，形成长条
+    bannerLabel->setFixedHeight(110);
     bannerLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    // *** 请修改下面的路径 ***
     QPixmap bannerPix("E:/B24011015/soft_design/school_badge_name.png");
-    if (bannerPix.isNull()) {
-        bannerLabel->setText("BANNER 图片加载失败\n(请修改路径)");
-        bannerLabel->setAlignment(Qt::AlignCenter);
-        bannerLabel->setStyleSheet("border: 1px solid red;");
-    }
-    else {
-        // 使用 KeepAspectRatioByExpanding 或 Ignored 配合样式
+    if (!bannerPix.isNull()) {
         bannerLabel->setPixmap(bannerPix.scaledToHeight(100, Qt::SmoothTransformation));
         bannerLabel->setAlignment(Qt::AlignCenter);
     }
+    else {
+        bannerLabel->setText("BANNER 加载失败");
+    }
 
-    // 顶部控制栏
     QHBoxLayout* topLayout = new QHBoxLayout();
     QLabel* welcomeMsg = new QLabel("当前用户: 普通用户");
     welcomeMsg->setStyleSheet("font-style: italic; color: #555;");
@@ -293,7 +382,6 @@ void bus_route_selection::setupUserUi() {
     resultDisplay = new QTextBrowser();
     resultDisplay->setStyleSheet("border: 2px solid #003366; background-color: #FAFAFA;");
 
-    // 将 Banner 放在最上面
     mainLayout->addWidget(bannerLabel, 0, Qt::AlignHCenter);
     mainLayout->addLayout(topLayout);
     mainLayout->addWidget(pathGroup);
@@ -301,6 +389,7 @@ void bus_route_selection::setupUserUi() {
     mainLayout->addWidget(resultDisplay);
 }
 
+// --- 路线查询 (添加语音播报) ---
 void bus_route_selection::searchRoute() {
     QString start = startInput->text().trimmed();
     QString end = endInput->text().trimmed();
@@ -313,13 +402,18 @@ void bus_route_selection::searchRoute() {
     resultDisplay->clear();
     resultDisplay->append(QString("<h3 style='color:#003366'>正在查询: 从 %1 到 %2 ...</h3>").arg(start, end));
 
-    // 调用新算法
     auto results = BusManager::instance().findPath(start, end);
 
     if (results.isEmpty()) {
+        // 失败语音 (TODO: 替换路径)
+        playVoice("E:/B24011015/soft_design/audio/cannot_find_route.mp3");
+
         resultDisplay->append("<h3 style='color:red'>未找到可行路线。</h3><p>原因可能为：<br>1. 两个站点间无法通过公交换乘到达。<br>2. 需要超过2次换乘(系统限制)。</p>");
         return;
     }
+
+    // 成功语音 (TODO: 替换路径)
+    playVoice("E:/B24011015/soft_design/audio/find_route.mp3");
 
     resultDisplay->clear();
     resultDisplay->append(QString("<h3 style='color:#003366'>查询结果: 从 %1 到 %2 (共 %3 种方案)</h3>")
@@ -328,8 +422,6 @@ void bus_route_selection::searchRoute() {
     int index = 1;
     for (const auto& res : results) {
         QString html;
-
-        // 1. 标题栏 (如果是推荐路线，加红加粗)
         if (res.isRecommended) {
             html += QString("<div style='background-color:#E6F7FF; border:1px solid #1890FF; padding:10px; margin-bottom:10px;'>");
             html += QString("<b style='color:#FF0000; font-size:16px;'>【最优推荐】 方案 %1</b>").arg(index++);
@@ -340,12 +432,9 @@ void bus_route_selection::searchRoute() {
             html += QString("<b>方案 %1:</b><br>").arg(index++);
         }
 
-        // 2. 路线详情构建
         html += "<ul style='margin-top:5px;'>";
         for (int i = 0; i < res.segments.size(); ++i) {
             const auto& seg = res.segments[i];
-
-            // 构建形如: [D1] 迈皋桥 -> 新街口 (5站)
             html += QString("<li><b>第 %1 程:</b> 乘坐 <font color='#0078d7'><b>%2</b></font> 从 %3 到 <b>%4</b> (%5 站, %6 分钟)</li>")
                 .arg(i + 1)
                 .arg(seg.routeId)
@@ -354,24 +443,21 @@ void bus_route_selection::searchRoute() {
                 .arg(seg.stops)
                 .arg(seg.timeCost);
 
-            // 如果还有下一程，提示换乘
             if (i < res.segments.size() - 1) {
                 html += QString("<div style='color:#666; margin-left:20px;'>⬇ 在 <b>%1</b> 换乘 (预计等待 5 分钟)</div>")
                     .arg(seg.endStation);
             }
         }
         html += "</ul>";
-
-        // 3. 底部统计
         html += QString("<div style='text-align:right; font-weight:bold; color:#333;'>总计: %1 站 | 预计耗时: <font color='#E65100'>%2 分钟</font></div>")
             .arg(res.totalStops).arg(res.totalTime);
-
-        html += "</div>"; // 关闭 div
+        html += "</div>";
         resultDisplay->append(html);
     }
 }
 
 void bus_route_selection::searchLine() {
+    // 保持原有代码
     QString id = lineQueryInput->text().trimmed();
     auto stops = BusManager::instance().getStopsByRouteId(id);
 
@@ -391,24 +477,21 @@ void bus_route_selection::searchLine() {
     resultDisplay->append(html);
 }
 
-// --- 4. 管理员界面 (包含长条横幅) ---
 void bus_route_selection::setupAdminUi() {
+    // 保持原有代码
     adminPage = new QWidget();
     QVBoxLayout* layout = new QVBoxLayout(adminPage);
 
-    // [图片区域] 复用逻辑，顶部横幅
     QLabel* bannerLabel = new QLabel();
     bannerLabel->setFixedHeight(110);
     bannerLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    // *** 请修改下面的路径 ***
     QPixmap bannerPix("E:/B24011015/soft_design/school_badge_name.png");
     if (!bannerPix.isNull()) {
-        // 等比缩放并居中显示
         bannerLabel->setPixmap(bannerPix.scaledToHeight(100, Qt::SmoothTransformation));
         bannerLabel->setAlignment(Qt::AlignCenter);
     }
     else {
-        bannerLabel->setText("请在代码中设置管理员界面的图片路径");
+        bannerLabel->setText("BANNER 加载失败");
     }
 
     QHBoxLayout* top = new QHBoxLayout();
@@ -438,10 +521,9 @@ void bus_route_selection::setupAdminUi() {
     routeTable->setColumnCount(3);
     routeTable->setHorizontalHeaderLabels({ "线路", "首末班", "站点预览" });
     routeTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-    // 表格样式优化
     routeTable->setStyleSheet("border: 2px solid #003366; selection-background-color: #003366;");
 
-    layout->addWidget(bannerLabel); // 添加图片
+    layout->addWidget(bannerLabel);
     layout->addLayout(top);
     layout->addWidget(inputGroup);
     layout->addWidget(routeTable);
@@ -498,4 +580,4 @@ void bus_route_selection::refreshAdminTable() {
         for (const auto& s : r.stations) stopPreview += s.name + " ";
         routeTable->setItem(row, 2, new QTableWidgetItem(stopPreview));
     }
-}
+} 

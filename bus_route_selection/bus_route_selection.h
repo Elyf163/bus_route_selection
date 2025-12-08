@@ -10,6 +10,12 @@
 #include <QFormLayout>
 #include <QPushButton>
 
+// 引入多媒体模块
+#include <QMediaPlayer>
+#include <QAudioOutput>
+#include <QUrl>
+#include <QResizeEvent> // 需要引入这个来处理按钮位置
+
 class bus_route_selection : public QMainWindow
 {
     Q_OBJECT
@@ -18,53 +24,64 @@ public:
     bus_route_selection(QWidget* parent = nullptr);
     ~bus_route_selection();
 
-    // --- 管理员账户配置区域 ---
-    // 你可以在这里修改管理员的账号和密码
+    // 管理员账户配置
     const QString ADMIN_USER = "LYF";
     const QString ADMIN_PASS = "elyfsian";
-    const QString RECOVERY_CODE = "Elysia"; // 找回码
-    // ------------------------
+    const QString RECOVERY_CODE = "Elysia";
+
+protected:
+    // 重写调整大小事件，用于固定音乐按钮位置
+    void resizeEvent(QResizeEvent* event) override;
 
 private slots:
-    // 页面跳转槽
-    void showSelectionPage();      // 返回选择界面
-    void showUserLoginPage();      // 进入用户登录页
-    void showAdminLoginPage();     // 进入管理员登录页
-
-    // 功能槽
-    void handleLogin();            // 处理登录逻辑
-    void handleForgotPwd();        // 找回密码
-
-    // 业务槽
+    void showSelectionPage();
+    void showUserLoginPage();
+    void showAdminLoginPage();
+    void handleLogin();
+    void handleForgotPwd();
     void showUserPanel();
     void showAdminPanel();
     void searchRoute();
     void searchLine();
     void saveNewRoute();
 
+    // --- 音频相关槽函数 ---
+    void initAudio();
+    void playBackgroundMusic();
+    void stopBackgroundMusic();
+    void toggleBgm();                       // 新增：切换背景音乐开关
+    void playVoice(const QString& filePath);
+
 private:
     void setupUi();
-    void setupSelectionUi(); // 新增：初始选择界面
-    void setupLoginUi();     // 修改：通用登录界面
+    void setupSelectionUi();
+    void setupLoginUi();
     void setupUserUi();
     void setupAdminUi();
-
     void refreshAdminTable();
 
+    // --- 成员变量 ---
     QStackedWidget* stackedWidget;
 
-    // --- 1. 身份选择界面 ---
-    QWidget* selectionPage;
+    // 音乐控制按钮 (悬浮)
+    QPushButton* m_musicBtn;
+    bool m_isMusicOn; // 记录音乐状态
 
-    // --- 2. 登录界面 (复用) ---
+    // 音频播放器
+    QMediaPlayer* m_bgmPlayer;
+    QAudioOutput* m_bgmOutput;
+    QMediaPlayer* m_voicePlayer;
+    QAudioOutput* m_voiceOutput;
+
+    // 界面组件指针 (保持原样)
+    QWidget* selectionPage;
     QWidget* loginPage;
-    QLabel* loginTitleLabel;     // 动态标题 "管理员登录" / "用户登录"
+    QLabel* loginTitleLabel;
     QLineEdit* userEdit;
     QLineEdit* passEdit;
-    QPushButton* forgotBtn;      // 仅管理员显示
-    bool m_isAdminLogin;         // 核心标志位：当前是否在进行管理员登录
+    QPushButton* forgotBtn;
+    bool m_isAdminLogin;
 
-    // --- 3. 业务界面 ---
     QWidget* userPage;
     QLineEdit* startInput;
     QLineEdit* endInput;
