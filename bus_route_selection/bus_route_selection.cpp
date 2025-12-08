@@ -136,7 +136,7 @@ void bus_route_selection::setupLoginUi() {
 
     QHBoxLayout* topLayout = new QHBoxLayout();
     QPushButton* backBtn = new QPushButton("<< 返回");
-    backBtn->setFixedSize(80, 30);
+    backBtn->setFixedSize(120, 35);
     backBtn->setStyleSheet("border: none; color: #003366; text-align: left; font-weight: normal;");
     connect(backBtn, &QPushButton::clicked, this, &bus_route_selection::showSelectionPage);
     topLayout->addWidget(backBtn);
