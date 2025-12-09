@@ -17,7 +17,7 @@ struct BusRoute {
     QTime lastBus;
 };
 
-// 路径中的一段 (例如 D1: 迈皋桥 -> 新街口)
+// 路径中的一段 
 struct PathSegment {
     QString routeId;
     QString startStation;

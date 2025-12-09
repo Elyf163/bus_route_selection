@@ -10,10 +10,13 @@ BusManager& BusManager::instance() {
 }
 
 BusManager::BusManager() {
+    // [核心修改] 动态获取 exe 所在目录 + routes.json
+    // QDir::toNativeSeparators 用于自动处理 Windows 的反斜杠问题
+    m_jsonPath = QDir::toNativeSeparators(QCoreApplication::applicationDirPath() + "/routes.json");
+
     loadRoutes();
 }
 
-// --- 基础管理功能 ---
 void BusManager::addRoute(const BusRoute& route) {
     for (int i = 0; i < m_routes.size(); ++i) {
         if (m_routes[i].routeId == route.routeId) {
@@ -43,7 +46,9 @@ void BusManager::saveRoutes() {
         arr.append(obj);
     }
     QJsonDocument doc(arr);
-    QFile file(FILE_NAME);
+
+    // [修改] 使用动态路径 m_jsonPath
+    QFile file(m_jsonPath);
     if (file.open(QIODevice::WriteOnly)) {
         file.write(doc.toJson());
         file.close();
@@ -51,8 +56,10 @@ void BusManager::saveRoutes() {
 }
 
 void BusManager::loadRoutes() {
-    QFile file(FILE_NAME);
+    // [修改] 使用动态路径 m_jsonPath
+    QFile file(m_jsonPath);
     if (!file.open(QIODevice::ReadOnly)) return;
+
     m_routes.clear();
     QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
     QJsonArray arr = doc.array();
@@ -71,6 +78,7 @@ void BusManager::loadRoutes() {
     }
 }
 
+// ... 下面的函数保持不变 ...
 QList<BusRoute> BusManager::getAllRoutes() const { return m_routes; }
 
 BusRoute BusManager::getRouteById(const QString& id) {
@@ -89,8 +97,6 @@ QList<QString> BusManager::getStopsByRouteId(const QString& routeId) {
     return list;
 }
 
-// --- 内部辅助函数实现 ---
-// 这个函数现在是 BusManager 类的一部分，所以可以访问 m_routes
 QList<BusRoute> BusManager::getRoutesByStation(const QString& stationName) {
     QList<BusRoute> list;
     for (const auto& r : m_routes) {
@@ -104,21 +110,20 @@ QList<BusRoute> BusManager::getRoutesByStation(const QString& stationName) {
     return list;
 }
 
-// *** 核心算法：基于 BFS 的多级路径搜索 ***
 QList<RouteResult> BusManager::findPath(const QString& start, const QString& end) {
+    // ... findPath 代码完全保持不变，直接复制即可 ...
+    // 为节省篇幅，此处省略 findPath 的内部逻辑，与你上传的文件一致
     QList<RouteResult> results;
     if (start == end) return results;
 
-    // BFS 队列节点结构
     struct SearchNode {
         QString currentStation;
-        QList<PathSegment> history; // 记录走过的路径段
-        QSet<QString> visitedRoutes; // 防止在同一条线路上反复横跳
+        QList<PathSegment> history;
+        QSet<QString> visitedRoutes;
     };
 
     QQueue<SearchNode> queue;
 
-    // 初始化：从起点出发
     QList<BusRoute> startRoutes = getRoutesByStation(start);
     for (const auto& route : startRoutes) {
         int startIdx = -1;
@@ -144,13 +149,11 @@ QList<RouteResult> BusManager::findPath(const QString& start, const QString& end
         }
     }
 
-    // 限制最大换乘次数 (例如路径段不超过3段 = 换乘2次)
     const int MAX_SEGMENTS = 3;
 
     while (!queue.isEmpty()) {
         SearchNode current = queue.dequeue();
 
-        // 1. 到达终点
         if (current.currentStation == end) {
             RouteResult res;
             res.segments = current.history;
@@ -162,7 +165,6 @@ QList<RouteResult> BusManager::findPath(const QString& start, const QString& end
                 res.totalStops += seg.stops;
                 res.totalTime += seg.timeCost;
             }
-            // 换乘惩罚
             if (res.segments.size() > 1) {
                 res.totalTime += (res.segments.size() - 1) * 5;
             }
@@ -170,10 +172,8 @@ QList<RouteResult> BusManager::findPath(const QString& start, const QString& end
             continue;
         }
 
-        // 2. 剪枝
         if (current.history.size() >= MAX_SEGMENTS) continue;
 
-        // 3. 扩展
         QList<BusRoute> nextRoutes = getRoutesByStation(current.currentStation);
         for (const auto& route : nextRoutes) {
             if (current.visitedRoutes.contains(route.routeId)) continue;
@@ -183,8 +183,6 @@ QList<RouteResult> BusManager::findPath(const QString& start, const QString& end
 
             for (int i = currIdx + 1; i < route.stations.size(); ++i) {
                 QString nextStation = route.stations[i].name;
-
-                // 简单防回头剪枝
                 bool isBackTrack = false;
                 for (const auto& h : current.history) if (h.startStation == nextStation) isBackTrack = true;
                 if (isBackTrack) continue;
@@ -206,7 +204,6 @@ QList<RouteResult> BusManager::findPath(const QString& start, const QString& end
         }
     }
 
-    // 后处理：去重
     for (int i = 0; i < results.size(); ++i) {
         for (int j = i + 1; j < results.size(); ) {
             bool samePath = true;
@@ -223,7 +220,6 @@ QList<RouteResult> BusManager::findPath(const QString& start, const QString& end
         }
     }
 
-    // 排序
     std::sort(results.begin(), results.end(), [](const RouteResult& a, const RouteResult& b) {
         return a.totalTime < b.totalTime;
         });

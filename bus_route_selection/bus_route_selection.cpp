@@ -10,8 +10,16 @@
 #include <QRegularExpression>
 #include <QPixmap>
 #include <QIcon>
+#include <QCoreApplication> // [新增]
+#include <QDir>             // [新增]
 
-// --- 全局样式 (保持不变) ---
+// --- [核心函数] 动态获取资源路径 ---
+QString getMediaPath(const QString& fileName) {
+    // 自动找到 exe 旁边的 media 文件夹
+    return QDir::toNativeSeparators(QCoreApplication::applicationDirPath() + "/media/" + fileName);
+}
+
+// --- 全局样式 ---
 const QString GLOBAL_STYLE = R"(
     QMainWindow, QWidget {
         background-color: #FFFFFF;
@@ -57,16 +65,9 @@ bus_route_selection::bus_route_selection(QWidget* parent)
     : QMainWindow(parent)
 {
     this->setStyleSheet(GLOBAL_STYLE);
-
-    // 1. 先初始化音频系统
     initAudio();
-
-    // 2. 构建界面 (包含悬浮按钮的创建)
     setupUi();
-
     resize(900, 700);
-
-    // 3. 默认开启背景音乐
     playBackgroundMusic();
 }
 
@@ -74,25 +75,22 @@ bus_route_selection::~bus_route_selection()
 {
 }
 
-// --- 音频系统初始化 ---
 void bus_route_selection::initAudio() {
-    // 配置 BGM
     m_bgmPlayer = new QMediaPlayer(this);
     m_bgmOutput = new QAudioOutput(this);
     m_bgmPlayer->setAudioOutput(m_bgmOutput);
-    m_bgmOutput->setVolume(0.3); // 背景音乐音量小一点
-    m_bgmPlayer->setLoops(QMediaPlayer::Infinite); // 无限循环
+    m_bgmOutput->setVolume(0.3);
+    m_bgmPlayer->setLoops(QMediaPlayer::Infinite);
 
-    // TODO: 请替换为背景音乐的绝对路径
-    m_bgmPlayer->setSource(QUrl::fromLocalFile("E:/B24011015/soft_design/audio/Background_Fragments.mp3"));
+    // [修改] 使用相对路径
+    m_bgmPlayer->setSource(QUrl::fromLocalFile(getMediaPath("Background_Fragments.mp3")));
 
-    // 配置 语音
     m_voicePlayer = new QMediaPlayer(this);
     m_voiceOutput = new QAudioOutput(this);
     m_voicePlayer->setAudioOutput(m_voiceOutput);
-    m_voiceOutput->setVolume(1.0); // 语音音量最大
+    m_voiceOutput->setVolume(1.0);
 
-    m_isMusicOn = true; // 默认状态
+    m_isMusicOn = true;
 }
 
 void bus_route_selection::playBackgroundMusic() {
@@ -109,28 +107,26 @@ void bus_route_selection::toggleBgm() {
     m_isMusicOn = !m_isMusicOn;
 
     if (m_isMusicOn) {
-        // 开启音乐
         m_bgmPlayer->play();
-        // TODO: 请替换为“音乐开启”图标路径
-        m_musicBtn->setIcon(QIcon("E:/B24011015/soft_design/music_on.png"));
+        // [修改] 使用相对路径
+        m_musicBtn->setIcon(QIcon(getMediaPath("music_on.png")));
         m_musicBtn->setToolTip("关闭背景音乐");
     }
     else {
-        // 关闭音乐
         m_bgmPlayer->pause();
-        // TODO: 请替换为“音乐关闭”图标路径
-        m_musicBtn->setIcon(QIcon("E:/B24011015/soft_design/music_off.png"));
+        // [修改] 使用相对路径
+        m_musicBtn->setIcon(QIcon(getMediaPath("music_off.png")));
         m_musicBtn->setToolTip("开启背景音乐");
     }
 }
 
-void bus_route_selection::playVoice(const QString& filePath) {
+void bus_route_selection::playVoice(const QString& fileName) { // 参数名改为 fileName 更贴切
     m_voicePlayer->stop();
-    m_voicePlayer->setSource(QUrl::fromLocalFile(filePath));
+    // [修改] 自动拼接路径
+    m_voicePlayer->setSource(QUrl::fromLocalFile(getMediaPath(fileName)));
     m_voicePlayer->play();
 }
 
-// --- 界面构建 ---
 void bus_route_selection::setupUi() {
     stackedWidget = new QStackedWidget(this);
     setCentralWidget(stackedWidget);
@@ -147,21 +143,18 @@ void bus_route_selection::setupUi() {
 
     stackedWidget->setCurrentWidget(selectionPage);
 
-    // --- 创建右下角悬浮音乐按钮 ---
-    // 注意：这里父对象设为 this (QMainWindow)，而不是 stackedWidget
     m_musicBtn = new QPushButton(this);
     m_musicBtn->setFixedSize(50, 50);
-    // 设置初始图标 (TODO: 替换路径)
-    m_musicBtn->setIcon(QIcon("E:/B24011015/soft_design/music_on.png"));
+    // [修改] 使用相对路径
+    m_musicBtn->setIcon(QIcon(getMediaPath("music_on.png")));
     m_musicBtn->setIconSize(QSize(30, 30));
     m_musicBtn->setCursor(Qt::PointingHandCursor);
     m_musicBtn->setToolTip("背景音乐开关");
-    // 设置圆形样式
     m_musicBtn->setStyleSheet(
         "QPushButton { "
         "   background-color: #E6F7FF; "
         "   border: 2px solid #003366; "
-        "   border-radius: 25px; " // 半径为宽高的一半，即圆形
+        "   border-radius: 25px; "
         "}"
         "QPushButton:hover { background-color: #BAE7FF; }"
     );
@@ -169,26 +162,22 @@ void bus_route_selection::setupUi() {
     connect(m_musicBtn, &QPushButton::clicked, this, &bus_route_selection::toggleBgm);
 }
 
-// --- 核心：重写 resizeEvent 以固定按钮位置 ---
 void bus_route_selection::resizeEvent(QResizeEvent* event) {
     QMainWindow::resizeEvent(event);
-
-    // 计算位置：右下角，距离右边和底部各 20 像素
     int x = this->width() - m_musicBtn->width() - 20;
     int y = this->height() - m_musicBtn->height() - 20;
-
     m_musicBtn->move(x, y);
-    m_musicBtn->raise(); // 确保按钮在最上层
+    m_musicBtn->raise();
 }
 
-// ... setupSelectionUi, setupLoginUi 等保持原有逻辑 ...
 void bus_route_selection::setupSelectionUi() {
     selectionPage = new QWidget();
     QVBoxLayout* layout = new QVBoxLayout(selectionPage);
 
     QLabel* logoLabel = new QLabel();
     logoLabel->setFixedSize(150, 150);
-    QPixmap logoPix("E:/B24011015/soft_design/school_badge.png");
+    // [修改] 使用相对路径
+    QPixmap logoPix(getMediaPath("school_badge.png"));
     if (!logoPix.isNull()) {
         logoLabel->setPixmap(logoPix.scaled(150, 150, Qt::KeepAspectRatio, Qt::SmoothTransformation));
     }
@@ -219,7 +208,6 @@ void bus_route_selection::setupSelectionUi() {
 }
 
 void bus_route_selection::setupLoginUi() {
-    // 保持原有代码，无需修改
     loginPage = new QWidget();
     QVBoxLayout* layout = new QVBoxLayout(loginPage);
 
@@ -287,15 +275,14 @@ void bus_route_selection::showAdminLoginPage() {
     stackedWidget->setCurrentWidget(loginPage);
 }
 
-// --- 登录处理 (添加语音播报) ---
 void bus_route_selection::handleLogin() {
     QString user = userEdit->text().trimmed();
     QString pass = passEdit->text().trimmed();
 
     if (m_isAdminLogin) {
         if (user == ADMIN_USER && pass == ADMIN_PASS) {
-            // 管理员登录成功语音 (TODO: 替换路径)
-            playVoice("E:/B24011015/soft_design/audio/admin_window.mp3");
+            // [修改] 仅传文件名
+            playVoice("admin_window.mp3");
             showAdminPanel();
         }
         else {
@@ -305,8 +292,8 @@ void bus_route_selection::handleLogin() {
     else {
         QRegularExpression regex("^[0-9]{6}$");
         if (regex.match(user).hasMatch() && regex.match(pass).hasMatch()) {
-            // 普通用户登录成功语音 (TODO: 替换路径)
-            playVoice("E:/B24011015/soft_design/audio/user_window.mp3");
+            // [修改] 仅传文件名
+            playVoice("user_window.mp3");
             showUserPanel();
         }
         else {
@@ -316,7 +303,6 @@ void bus_route_selection::handleLogin() {
 }
 
 void bus_route_selection::handleForgotPwd() {
-    // 保持原有代码
     bool ok;
     QString code = QInputDialog::getText(this, "找回密码",
         "请输入找回码 (Recovery Code):",
@@ -333,14 +319,14 @@ void bus_route_selection::handleForgotPwd() {
 }
 
 void bus_route_selection::setupUserUi() {
-    // 保持原有代码
     userPage = new QWidget();
     QVBoxLayout* mainLayout = new QVBoxLayout(userPage);
 
     QLabel* bannerLabel = new QLabel();
     bannerLabel->setFixedHeight(110);
     bannerLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    QPixmap bannerPix("E:/B24011015/soft_design/school_badge_name.png");
+    // [修改] 使用相对路径
+    QPixmap bannerPix(getMediaPath("school_badge_name.png"));
     if (!bannerPix.isNull()) {
         bannerLabel->setPixmap(bannerPix.scaledToHeight(100, Qt::SmoothTransformation));
         bannerLabel->setAlignment(Qt::AlignCenter);
@@ -389,7 +375,6 @@ void bus_route_selection::setupUserUi() {
     mainLayout->addWidget(resultDisplay);
 }
 
-// --- 路线查询 (添加语音播报) ---
 void bus_route_selection::searchRoute() {
     QString start = startInput->text().trimmed();
     QString end = endInput->text().trimmed();
@@ -405,15 +390,15 @@ void bus_route_selection::searchRoute() {
     auto results = BusManager::instance().findPath(start, end);
 
     if (results.isEmpty()) {
-        // 失败语音 (TODO: 替换路径)
-        playVoice("E:/B24011015/soft_design/audio/cannot_find_route.mp3");
+        // [修改] 仅传文件名
+        playVoice("cannot_find_route.mp3");
 
         resultDisplay->append("<h3 style='color:red'>未找到可行路线。</h3><p>原因可能为：<br>1. 两个站点间无法通过公交换乘到达。<br>2. 需要超过2次换乘(系统限制)。</p>");
         return;
     }
 
-    // 成功语音 (TODO: 替换路径)
-    playVoice("E:/B24011015/soft_design/audio/find_route.mp3");
+    // [修改] 仅传文件名
+    playVoice("find_route.mp3");
 
     resultDisplay->clear();
     resultDisplay->append(QString("<h3 style='color:#003366'>查询结果: 从 %1 到 %2 (共 %3 种方案)</h3>")
@@ -422,14 +407,24 @@ void bus_route_selection::searchRoute() {
     int index = 1;
     for (const auto& res : results) {
         QString html;
+
+        // --- 核心修复：使用 align="left" 属性强制左对齐 ---
+
+        // 1. 容器层强制左对齐
         if (res.isRecommended) {
-            html += QString("<div style='background-color:#E6F7FF; border:1px solid #1890FF; padding:10px; margin-bottom:10px;'>");
-            html += QString("<b style='color:#FF0000; font-size:16px;'>【最优推荐】 方案 %1</b>").arg(index++);
-            html += QString(" <span style='color:#666; font-size:12px;'>(耗时最短)</span><br>");
+            // [修改点] 添加 align='left' 属性，这是最稳的修复
+            html += QString("<div align='left' style='background-color:#E6F7FF; border:1px solid #1890FF; padding:10px; margin-bottom:10px;'>");
+
+            // [修改点] 标题单独包裹一个 div 并强制左对齐
+            html += QString("<div align='left'><b style='color:#FF0000; font-size:16px;'>【最优推荐】 方案 %1</b>").arg(index++);
+            html += QString(" <span style='color:#666; font-size:12px;'>(耗时最短)</span></div>");
         }
         else {
-            html += QString("<div style='border-bottom:1px solid #ccc; padding:10px; margin-bottom:10px;'>");
-            html += QString("<b>方案 %1:</b><br>").arg(index++);
+            // [修改点] 添加 align='left' 属性
+            html += QString("<div align='left' style='border-bottom:1px solid #ccc; padding:10px; margin-bottom:10px;'>");
+
+            // [修改点] 标题单独包裹一个 div 并强制左对齐
+            html += QString("<div align='left'><b>方案 %1:</b></div>").arg(index++);
         }
 
         html += "<ul style='margin-top:5px;'>";
@@ -449,15 +444,21 @@ void bus_route_selection::searchRoute() {
             }
         }
         html += "</ul>";
-        html += QString("<div style='text-align:right; font-weight:bold; color:#333;'>总计: %1 站 | 预计耗时: <font color='#E65100'>%2 分钟</font></div>")
+
+        // 底部统计保持右对齐 (使用 align='right' 更稳定)
+        html += QString("<div align='right' style='font-weight:bold; color:#333;'>总计: %1 站 | 预计耗时: <font color='#E65100'>%2 分钟</font></div>")
             .arg(res.totalStops).arg(res.totalTime);
-        html += "</div>";
+
+        html += "</div>"; // 关闭外层 div
+
+        // 强制插入一个清除属性，确保下一个循环从左边开始 (双重保险)
+        html += "<div style='clear:both;'></div>";
+
         resultDisplay->append(html);
     }
 }
 
 void bus_route_selection::searchLine() {
-    // 保持原有代码
     QString id = lineQueryInput->text().trimmed();
     auto stops = BusManager::instance().getStopsByRouteId(id);
 
@@ -478,14 +479,14 @@ void bus_route_selection::searchLine() {
 }
 
 void bus_route_selection::setupAdminUi() {
-    // 保持原有代码
     adminPage = new QWidget();
     QVBoxLayout* layout = new QVBoxLayout(adminPage);
 
     QLabel* bannerLabel = new QLabel();
     bannerLabel->setFixedHeight(110);
     bannerLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    QPixmap bannerPix("E:/B24011015/soft_design/school_badge_name.png");
+    // [修改] 使用相对路径
+    QPixmap bannerPix(getMediaPath("school_badge_name.png"));
     if (!bannerPix.isNull()) {
         bannerLabel->setPixmap(bannerPix.scaledToHeight(100, Qt::SmoothTransformation));
         bannerLabel->setAlignment(Qt::AlignCenter);
@@ -580,4 +581,4 @@ void bus_route_selection::refreshAdminTable() {
         for (const auto& s : r.stations) stopPreview += s.name + " ";
         routeTable->setItem(row, 2, new QTableWidgetItem(stopPreview));
     }
-} 
+}
