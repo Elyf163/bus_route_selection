@@ -1,5 +1,3 @@
-#include "bus_route_selection.h"
-#include "BusManager.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QPushButton>
@@ -14,6 +12,9 @@
 #include <QDir>             
 #include <QCompleter>           // 用于自动补全
 #include <QStringListModel> 
+
+#include "bus_route_selection.h"
+#include "BusManager.h"
 
 QString getMediaPath(const QString& fileName) {
     return QDir::toNativeSeparators(QCoreApplication::applicationDirPath() + "/media/" + fileName);
@@ -329,26 +330,31 @@ void bus_route_selection::handleLogin() {
     QString user = userEdit->text().trimmed();
     QString pass = passEdit->text().trimmed();
 
-    if (m_isAdminLogin) {
-        if (user == ADMIN_USER && pass == ADMIN_PASS) {
-            // [修改] 仅传文件名
-            playVoice("admin_window.mp3");
+    if (user.isEmpty() || pass.isEmpty()) {
+        QMessageBox::warning(this, "提示", "账号或密码不能为空");
+        return;
+    }
+
+    // 确定当前尝试登录的角色
+    QString targetRole = m_isAdminLogin ? "admin" : "user";
+
+    // 调用 UserManager 进行验证
+    bool isValid = UserManager::instance().verifyUser(user, pass, targetRole);
+
+    if (isValid) {
+        if (m_isAdminLogin) {
+            playVoice("admin_window.mp3"); // 替换为你的语音文件名
             showAdminPanel();
         }
         else {
-            QMessageBox::critical(this, "错误", "管理员账号或密码错误！");
+            playVoice("user_window.mp3"); // 替换为你的语音文件名
+            showUserPanel();
         }
     }
     else {
-        QRegularExpression regex("^[0-9]{6}$");
-        if (regex.match(user).hasMatch() && regex.match(pass).hasMatch()) {
-            // [修改] 仅传文件名
-            playVoice("user_window.mp3");
-            showUserPanel();
-        }
-        else {
-            QMessageBox::warning(this, "格式错误", "普通用户账号和密码必须均为6位数字！");
-        }
+        // 验证失败
+        playVoice("login_failed.mp3"); // 建议添加一个登录失败的语音
+        QMessageBox::critical(this, "登录失败", "账号密码错误，或该账号无权访问当前模式！");
     }
 }
 
@@ -359,11 +365,12 @@ void bus_route_selection::handleForgotPwd() {
         QLineEdit::Normal, "", &ok);
     if (ok && !code.isEmpty()) {
         if (code == RECOVERY_CODE) {
-            QString msg = QString("验证成功！\n\n您的管理员密码是: %1").arg(ADMIN_PASS);
-            QMessageBox::information(this, "密码找回", msg);
+            // 这里不再显示密码，而是提示文件位置，因为密码可能有很多个
+            QString path = QDir::toNativeSeparators(QCoreApplication::applicationDirPath() + "/users.json");
+            QMessageBox::information(this, "提示", "验证通过。\n请查看程序目录下的 users.json 文件获取密码。\n路径: " + path);
         }
         else {
-            QMessageBox::warning(this, "错误", "找回码错误！请联系开发者。");
+            QMessageBox::warning(this, "错误", "找回码错误！");
         }
     }
 }

@@ -92,6 +92,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="UserManager.cpp" />
     <QtRcc Include="bus_route_selection.qrc" />
     <QtUic Include="bus_route_selection.ui" />
     <QtMoc Include="bus_route_selection.h" />
@@ -101,6 +102,7 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <QtMoc Include="UserManager.h" />
     <QtMoc Include="ChatWidget.h" />
     <QtMoc Include="BusManager.h" />
     <ClInclude Include="BusStructs.h" />

@@ -19,6 +19,9 @@
 // 引入聊天组件
 #include "ChatWidget.h"
 
+//用户数据管理
+#include "UserManager.h"
+
 class bus_route_selection : public QMainWindow
 {
     Q_OBJECT
@@ -27,10 +30,7 @@ public:
     bus_route_selection(QWidget* parent = nullptr);
     ~bus_route_selection();
 
-    // 管理员账户配置
-    const QString ADMIN_USER = "LYF";
-    const QString ADMIN_PASS = "elyfsian";
-    const QString RECOVERY_CODE = "Elysia";
+    const QString RECOVERY_CODE = "Elysia"; // 找回码
 
 protected:
     // [注意] 确保这里只有这一行 resizeEvent 声明
