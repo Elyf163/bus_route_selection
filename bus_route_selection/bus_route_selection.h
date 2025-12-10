@@ -9,12 +9,10 @@
 #include <QGroupBox>
 #include <QFormLayout>
 #include <QPushButton>
-
-// 引入多媒体模块
 #include <QMediaPlayer>
 #include <QAudioOutput>
 #include <QUrl>
-#include <QResizeEvent> // 需要引入这个来处理按钮位置
+#include <QResizeEvent>
 
 class bus_route_selection : public QMainWindow
 {
@@ -30,7 +28,7 @@ public:
     const QString RECOVERY_CODE = "Elysia";
 
 protected:
-    // 重写调整大小事件，用于固定音乐按钮位置
+    // 固定音乐按钮位置
     void resizeEvent(QResizeEvent* event) override;
 
 private slots:
@@ -49,7 +47,7 @@ private slots:
     void initAudio();
     void playBackgroundMusic();
     void stopBackgroundMusic();
-    void toggleBgm();                       // 新增：切换背景音乐开关
+    void toggleBgm();                       // 切换背景音乐开关
     void playVoice(const QString& filePath);
 
 private:
@@ -63,7 +61,7 @@ private:
     // --- 成员变量 ---
     QStackedWidget* stackedWidget;
 
-    // 音乐控制按钮 (悬浮)
+    // 音乐控制按钮
     QPushButton* m_musicBtn;
     bool m_isMusicOn; // 记录音乐状态
 

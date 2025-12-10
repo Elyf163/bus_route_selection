@@ -10,12 +10,12 @@
 #include <QRegularExpression>
 #include <QPixmap>
 #include <QIcon>
-#include <QCoreApplication> // [新增]
-#include <QDir>             // [新增]
+#include <QCoreApplication> 
+#include <QDir>             
+#include <QCompleter>           // 用于自动补全
+#include <QStringListModel> 
 
-// --- [核心函数] 动态获取资源路径 ---
 QString getMediaPath(const QString& fileName) {
-    // 自动找到 exe 旁边的 media 文件夹
     return QDir::toNativeSeparators(QCoreApplication::applicationDirPath() + "/media/" + fileName);
 }
 
@@ -322,19 +322,17 @@ void bus_route_selection::setupUserUi() {
     userPage = new QWidget();
     QVBoxLayout* mainLayout = new QVBoxLayout(userPage);
 
+    // ... (Banner 图片部分保持不变) ...
     QLabel* bannerLabel = new QLabel();
     bannerLabel->setFixedHeight(110);
     bannerLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    // [修改] 使用相对路径
     QPixmap bannerPix(getMediaPath("school_badge_name.png"));
     if (!bannerPix.isNull()) {
         bannerLabel->setPixmap(bannerPix.scaledToHeight(100, Qt::SmoothTransformation));
         bannerLabel->setAlignment(Qt::AlignCenter);
     }
-    else {
-        bannerLabel->setText("BANNER 加载失败");
-    }
 
+    // ... (顶部栏部分保持不变) ...
     QHBoxLayout* topLayout = new QHBoxLayout();
     QLabel* welcomeMsg = new QLabel("当前用户: 普通用户");
     welcomeMsg->setStyleSheet("font-style: italic; color: #555;");
@@ -346,8 +344,31 @@ void bus_route_selection::setupUserUi() {
 
     QGroupBox* pathGroup = new QGroupBox("路线规划 (点到点)");
     QHBoxLayout* pathLayout = new QHBoxLayout(pathGroup);
+
     startInput = new QLineEdit(); startInput->setPlaceholderText("起点站");
     endInput = new QLineEdit(); endInput->setPlaceholderText("终点站");
+
+    // --- [核心修改开始] 添加自动补全功能 ---
+
+    // 1. 从 Manager 获取所有站点
+    QStringList stationList = BusManager::instance().getAllStations();
+
+    // 2. 创建补全器
+    QCompleter* stationCompleter = new QCompleter(stationList, this);
+
+    // 3. 设置过滤模式：MatchContains 表示只要包含这个字就提示 (输入"京"也能提示"南京站")
+    //    如果想要必须从头匹配 (输入"南"才提示"南京站")，可以用 Qt::MatchStartsWith
+    stationCompleter->setFilterMode(Qt::MatchContains);
+
+    // 4. 设置大小写不敏感
+    stationCompleter->setCaseSensitivity(Qt::CaseInsensitive);
+
+    // 5. 将补全器绑定到输入框
+    startInput->setCompleter(stationCompleter);
+    endInput->setCompleter(stationCompleter);
+
+    // --- [核心修改结束] ---
+
     QPushButton* searchBtn = new QPushButton("查询方案");
     connect(searchBtn, &QPushButton::clicked, this, &bus_route_selection::searchRoute);
     pathLayout->addWidget(new QLabel("从"));
@@ -356,6 +377,7 @@ void bus_route_selection::setupUserUi() {
     pathLayout->addWidget(endInput);
     pathLayout->addWidget(searchBtn);
 
+    // ... (剩下的代码保持不变) ...
     QGroupBox* lineGroup = new QGroupBox("车次查询 (查线路)");
     QHBoxLayout* lineLayout = new QHBoxLayout(lineGroup);
     lineQueryInput = new QLineEdit(); lineQueryInput->setPlaceholderText("线路号 (如: D1)");

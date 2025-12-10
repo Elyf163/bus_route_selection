@@ -23,14 +23,14 @@ public:
     BusRoute getRouteById(const QString& id);
 
     QList<QString> getStopsByRouteId(const QString& routeId);
+    //获取所有不重复的站点名称，用于自动补全
+    QList<QString> getAllStations();
     QList<RouteResult> findPath(const QString& start, const QString& end);
 
 private:
     BusManager();
 
     QList<BusRoute> m_routes;
-
-    // [修改] 不再是 const 常量，而是变量，因为要在构造函数里动态赋值
     QString m_jsonPath;
 
     QList<BusRoute> getRoutesByStation(const QString& stationName);

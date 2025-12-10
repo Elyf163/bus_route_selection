@@ -228,3 +228,14 @@ QList<RouteResult> BusManager::findPath(const QString& start, const QString& end
 
     return results;
 }
+//获取所有不重复的站点名称
+QList<QString> BusManager::getAllStations() {
+    QSet<QString> uniqueStations; // 使用 Set 自动去重
+    for (const auto& route : m_routes) {
+        for (const auto& station : route.stations) {
+            uniqueStations.insert(station.name);
+        }
+    }
+    // 将 Set 转换为 List 返回
+    return uniqueStations.values();
+}
