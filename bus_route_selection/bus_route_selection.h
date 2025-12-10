@@ -16,11 +16,56 @@
 #include <QUrl>
 #include <QResizeEvent> 
 
+// 需要引入鼠标事件
+#include <QMouseEvent> 
+
 // 引入聊天组件
 #include "ChatWidget.h"
 
 //用户数据管理
 #include "UserManager.h"
+
+
+class DraggableButton : public QPushButton {
+public:
+    explicit DraggableButton(QWidget* parent = nullptr) : QPushButton(parent) {}
+    explicit DraggableButton(const QString& text, QWidget* parent = nullptr) : QPushButton(text, parent) {}
+
+protected:
+    // 鼠标按下：记录鼠标在按钮内部的相对位置
+    void mousePressEvent(QMouseEvent* event) override {
+        if (event->button() == Qt::LeftButton) {
+            m_isDragging = true;
+            // 记录偏移量 = 鼠标全局位置 - 按钮左上角位置
+            m_dragOffset = event->globalPosition().toPoint() - this->frameGeometry().topLeft();
+        }
+        QPushButton::mousePressEvent(event); // 保留点击功能
+    }
+
+    // 鼠标移动：更新按钮位置
+    void mouseMoveEvent(QMouseEvent* event) override {
+        if (m_isDragging && (event->buttons() & Qt::LeftButton)) {
+            // 新位置 = 当前鼠标全局位置 - 初始偏移量
+            this->move(event->globalPosition().toPoint() - m_dragOffset);
+
+            // 阻止事件继续传播，防止触发点击
+            return;
+        }
+        QPushButton::mouseMoveEvent(event);
+    }
+
+    // 鼠标释放
+    void mouseReleaseEvent(QMouseEvent* event) override {
+        m_isDragging = false;
+        QPushButton::mouseReleaseEvent(event);
+    }
+
+private:
+    bool m_isDragging = false;
+    QPoint m_dragOffset;
+};
+
+
 
 class bus_route_selection : public QMainWindow
 {
@@ -70,11 +115,12 @@ private:
     QStackedWidget* stackedWidget;
 
     // 音乐控制按钮
-    QPushButton* m_musicBtn;
+    DraggableButton* m_musicBtn;       // 音乐按钮
+   
     bool m_isMusicOn;
 
     // 聊天控制按钮
-    QPushButton* m_chatTriggerBtn;
+    DraggableButton* m_chatTriggerBtn; // 聊天呼出按钮
     ChatWidget* m_chatWidget;
 
     // 音频播放器

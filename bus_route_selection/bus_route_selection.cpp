@@ -142,8 +142,9 @@ void bus_route_selection::setupUi() {
 
     stackedWidget->setCurrentWidget(selectionPage);
 
-    m_musicBtn = new QPushButton(this);
+    m_musicBtn = new DraggableButton(this); // [修改] 使用自定义类
     m_musicBtn->setFixedSize(50, 50);
+    m_musicBtn->move(this->width()+60, this->height());
     // [修改] 使用相对路径
     m_musicBtn->setIcon(QIcon(getMediaPath("music_on.png")));
     m_musicBtn->setIconSize(QSize(30, 30));
@@ -160,9 +161,10 @@ void bus_route_selection::setupUi() {
 
     connect(m_musicBtn, &QPushButton::clicked, this, &bus_route_selection::toggleBgm);
 
-    // --- [新增] 左下角 DeepSeek 聊天触发按钮 ---
-    m_chatTriggerBtn = new QPushButton("询问 DeepSeek", this);
+    // ---  左下角 DeepSeek 聊天触发按钮 ---
+    m_chatTriggerBtn = new DraggableButton("询问 DeepSeek", this); // [修改] 使用自定义类
     m_chatTriggerBtn->setFixedSize(150, 40);
+    m_chatTriggerBtn->move(20, this->height());
     m_chatTriggerBtn->setStyleSheet(
         "QPushButton { "
         "   background-color: #0078d7; color: white; "
@@ -172,7 +174,7 @@ void bus_route_selection::setupUi() {
     );
     connect(m_chatTriggerBtn, &QPushButton::clicked, this, &bus_route_selection::toggleChat);
 
-    // --- [新增] 聊天窗口实体 ---
+    // -聊天窗口实体 ---
     m_chatWidget = new ChatWidget(this);
     m_chatWidget->setFixedSize(350, 500);
     m_chatWidget->hide();
@@ -183,11 +185,21 @@ void bus_route_selection::toggleChat() {
     }
     else {
         m_chatWidget->show();
-        m_chatWidget->raise(); // 放到最上层
+        m_chatWidget->raise();
 
-        // 简单计算一下初始位置 (resizeEvent 会再次修正它)
-        int x = 20;
-        int y = this->height() - m_chatTriggerBtn->height() - 20 - m_chatWidget->height() - 10;
+        //获取按钮当前的实时位置
+        QPoint btnPos = m_chatTriggerBtn->pos();
+
+        // 计算聊天框位置：在按钮上方显示
+        // 如果按钮太靠上，可能会遮挡，这里简单处理为“显示在按钮正上方”
+        int x = btnPos.x();
+        int y = btnPos.y() - m_chatWidget->height() - 10;
+
+        // 边界保护：如果 y < 0 (超出顶部)，则显示在按钮下方
+        if (y < 0) {
+            y = btnPos.y() + m_chatTriggerBtn->height() + 10;
+        }
+
         m_chatWidget->move(x, y);
     }
 }
@@ -195,30 +207,6 @@ void bus_route_selection::toggleChat() {
 
 void bus_route_selection::resizeEvent(QResizeEvent* event) {
     QMainWindow::resizeEvent(event);
-
-    // --- 逻辑 A: 处理右下角的音乐按钮 ---
-    if (m_musicBtn) {
-        int musicX = this->width() - m_musicBtn->width() - 20;
-        int musicY = this->height() - m_musicBtn->height() - 20;
-        m_musicBtn->move(musicX, musicY);
-        m_musicBtn->raise();
-    }
-
-    // --- 逻辑 B: 处理左下角的聊天按钮 ---
-    if (m_chatTriggerBtn) {
-        int chatX = 20;
-        int chatY = this->height() - m_chatTriggerBtn->height() - 20;
-        m_chatTriggerBtn->move(chatX, chatY);
-        m_chatTriggerBtn->raise();
-
-        // --- 逻辑 C: 处理聊天窗口 (如果在显示状态) ---
-        // 聊天框应该显示在聊天按钮的“正上方”
-        if (m_chatWidget && m_chatWidget->isVisible()) {
-            int widgetY = chatY - m_chatWidget->height() - 10;
-            m_chatWidget->move(chatX, widgetY);
-            m_chatWidget->raise();
-        }
-    }
 }
 
 void bus_route_selection::setupSelectionUi() {
