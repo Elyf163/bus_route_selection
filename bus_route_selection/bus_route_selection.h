@@ -9,10 +9,15 @@
 #include <QGroupBox>
 #include <QFormLayout>
 #include <QPushButton>
+
+// 引入多媒体模块
 #include <QMediaPlayer>
 #include <QAudioOutput>
 #include <QUrl>
-#include <QResizeEvent>
+#include <QResizeEvent> 
+
+// 引入聊天组件
+#include "ChatWidget.h"
 
 class bus_route_selection : public QMainWindow
 {
@@ -28,7 +33,7 @@ public:
     const QString RECOVERY_CODE = "Elysia";
 
 protected:
-    // 固定音乐按钮位置
+    // [注意] 确保这里只有这一行 resizeEvent 声明
     void resizeEvent(QResizeEvent* event) override;
 
 private slots:
@@ -47,8 +52,11 @@ private slots:
     void initAudio();
     void playBackgroundMusic();
     void stopBackgroundMusic();
-    void toggleBgm();                       // 切换背景音乐开关
+    void toggleBgm();
     void playVoice(const QString& filePath);
+
+    // --- 聊天相关 ---
+    void toggleChat();
 
 private:
     void setupUi();
@@ -63,7 +71,11 @@ private:
 
     // 音乐控制按钮
     QPushButton* m_musicBtn;
-    bool m_isMusicOn; // 记录音乐状态
+    bool m_isMusicOn;
+
+    // 聊天控制按钮
+    QPushButton* m_chatTriggerBtn;
+    ChatWidget* m_chatWidget;
 
     // 音频播放器
     QMediaPlayer* m_bgmPlayer;
@@ -71,7 +83,7 @@ private:
     QMediaPlayer* m_voicePlayer;
     QAudioOutput* m_voiceOutput;
 
-    // 界面组件指针 (保持原样)
+    // 界面组件指针
     QWidget* selectionPage;
     QWidget* loginPage;
     QLabel* loginTitleLabel;

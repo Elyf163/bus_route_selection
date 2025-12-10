@@ -37,7 +37,7 @@
   </ImportGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="QtSettings">
     <QtInstall>6.10.0_msvc2022_64</QtInstall>
-    <QtModules>core;gui;widgets;multimedia</QtModules>
+    <QtModules>core;gui;network;widgets;multimedia</QtModules>
     <QtBuildConfig>debug</QtBuildConfig>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'" Label="QtSettings">
@@ -97,9 +97,11 @@
     <QtMoc Include="bus_route_selection.h" />
     <ClCompile Include="BusManager.cpp" />
     <ClCompile Include="bus_route_selection.cpp" />
+    <ClCompile Include="ChatWidget.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <QtMoc Include="ChatWidget.h" />
     <QtMoc Include="BusManager.h" />
     <ClInclude Include="BusStructs.h" />
   </ItemGroup>
