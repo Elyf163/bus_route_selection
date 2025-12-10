@@ -457,14 +457,12 @@ void bus_route_selection::searchRoute() {
     auto results = BusManager::instance().findPath(start, end);
 
     if (results.isEmpty()) {
-        // [修改] 仅传文件名
         playVoice("cannot_find_route.mp3");
 
         resultDisplay->append("<h3 style='color:red'>未找到可行路线。</h3><p>原因可能为：<br>1. 两个站点间无法通过公交换乘到达。<br>2. 需要超过2次换乘(系统限制)。</p>");
         return;
     }
 
-    // [修改] 仅传文件名
     playVoice("find_route.mp3");
 
     resultDisplay->clear();
@@ -475,36 +473,40 @@ void bus_route_selection::searchRoute() {
     for (const auto& res : results) {
         QString html;
 
-        // --- 核心修复：使用 align="left" 属性强制左对齐 ---
-
-        // 1. 容器层强制左对齐
+        // --- 外层容器 (强制左对齐) ---
         if (res.isRecommended) {
-            // [修改点] 添加 align='left' 属性，这是最稳的修复
             html += QString("<div align='left' style='background-color:#E6F7FF; border:1px solid #1890FF; padding:10px; margin-bottom:10px;'>");
-
-            // [修改点] 标题单独包裹一个 div 并强制左对齐
             html += QString("<div align='left'><b style='color:#FF0000; font-size:16px;'>【最优推荐】 方案 %1</b>").arg(index++);
             html += QString(" <span style='color:#666; font-size:12px;'>(耗时最短)</span></div>");
         }
         else {
-            // [修改点] 添加 align='left' 属性
             html += QString("<div align='left' style='border-bottom:1px solid #ccc; padding:10px; margin-bottom:10px;'>");
-
-            // [修改点] 标题单独包裹一个 div 并强制左对齐
             html += QString("<div align='left'><b>方案 %1:</b></div>").arg(index++);
         }
 
         html += "<ul style='margin-top:5px;'>";
+
+        // --- 遍历每一段路线 ---
         for (int i = 0; i < res.segments.size(); ++i) {
             const auto& seg = res.segments[i];
+
+            // === [核心修改] 处理返程名称显示 ===
+            QString displayId = seg.routeId;
+            if (displayId.endsWith("_REV")) {
+                // 如果 ID 是 "D1_REV"，替换为 "D1 (返程)"
+                displayId = displayId.replace("_REV", "") + " (返程)";
+            }
+            // ===================================
+
             html += QString("<li><b>第 %1 程:</b> 乘坐 <font color='#0078d7'><b>%2</b></font> 从 %3 到 <b>%4</b> (%5 站, %6 分钟)</li>")
                 .arg(i + 1)
-                .arg(seg.routeId)
+                .arg(displayId)  // 使用处理过的 displayId
                 .arg(seg.startStation)
                 .arg(seg.endStation)
                 .arg(seg.stops)
                 .arg(seg.timeCost);
 
+            // 如果还有下一段，显示换乘提示
             if (i < res.segments.size() - 1) {
                 html += QString("<div style='color:#666; margin-left:20px;'>⬇ 在 <b>%1</b> 换乘 (预计等待 5 分钟)</div>")
                     .arg(seg.endStation);
@@ -512,14 +514,12 @@ void bus_route_selection::searchRoute() {
         }
         html += "</ul>";
 
-        // 底部统计保持右对齐 (使用 align='right' 更稳定)
+        // --- 底部统计信息 (右对齐) ---
         html += QString("<div align='right' style='font-weight:bold; color:#333;'>总计: %1 站 | 预计耗时: <font color='#E65100'>%2 分钟</font></div>")
             .arg(res.totalStops).arg(res.totalTime);
 
         html += "</div>"; // 关闭外层 div
-
-        // 强制插入一个清除属性，确保下一个循环从左边开始 (双重保险)
-        html += "<div style='clear:both;'></div>";
+        html += "<div style='clear:both;'></div>"; // 清除浮动，防止布局错乱
 
         resultDisplay->append(html);
     }

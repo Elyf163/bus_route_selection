@@ -56,7 +56,6 @@ void BusManager::saveRoutes() {
 }
 
 void BusManager::loadRoutes() {
-    // [修改] 使用动态路径 m_jsonPath
     QFile file(m_jsonPath);
     if (!file.open(QIODevice::ReadOnly)) return;
 
@@ -75,6 +74,48 @@ void BusManager::loadRoutes() {
             r.stations.append({ sObj["name"].toString(), sObj["time"].toInt() });
         }
         m_routes.append(r);
+    }
+
+    // 2. [新增] 自动生成返程路线
+    QList<BusRoute> reverseRoutes; // 临时存一下，防止遍历时修改容器导致迭代器失效
+
+    for (const auto& originalRoute : m_routes) {
+        // 如果已经是自动生成的返程路线，就跳过，防止无限循环
+        if (originalRoute.routeId.endsWith("_REV")) continue;
+
+        BusRoute revRoute;
+        // 1. 设置 ID，例如 "D1" 变成 "D1_REV"
+        revRoute.routeId = originalRoute.routeId + "_REV";
+
+        // 2. 设置首末班时间 (返程通常也是这个时间，或者你可以倒过来)
+        revRoute.firstBus = originalRoute.firstBus;
+        revRoute.lastBus = originalRoute.lastBus;
+
+        // 3. 反转站点
+        // 原本: A(0) -> B(5) -> C(15)
+        // 目标: C(0) -> B(10) -> A(15) 
+        // 算法: 新的累积时间 = 总时间 - 原本该站的时间
+
+        int totalTime = originalRoute.stations.last().timeFromStart; // 总耗时
+
+        // 从后往前遍历原路线
+        for (int i = originalRoute.stations.size() - 1; i >= 0; --i) {
+            Station s = originalRoute.stations[i];
+
+            // 计算新的累积时间
+            // 例如 C站原为15，Total 15。新时间 = 15 - 15 = 0
+            // 例如 B站原为5， Total 15。新时间 = 15 - 5 = 10
+            int newTime = totalTime - s.timeFromStart;
+
+            revRoute.stations.append({ s.name, newTime });
+        }
+
+        reverseRoutes.append(revRoute);
+    }
+
+    // 3. 将生成的返程路线合并到主列表中
+    for (const auto& r : reverseRoutes) {
+        addRoute(r); // 假设你有一个 addRoute 函数将路线加入 m_routes 和 map
     }
 }
 
@@ -111,8 +152,6 @@ QList<BusRoute> BusManager::getRoutesByStation(const QString& stationName) {
 }
 
 QList<RouteResult> BusManager::findPath(const QString& start, const QString& end) {
-    // ... findPath 代码完全保持不变，直接复制即可 ...
-    // 为节省篇幅，此处省略 findPath 的内部逻辑，与你上传的文件一致
     QList<RouteResult> results;
     if (start == end) return results;
 
