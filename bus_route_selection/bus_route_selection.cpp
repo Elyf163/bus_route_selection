@@ -10,17 +10,18 @@
 #include <QIcon>
 #include <QCoreApplication> 
 #include <QDir>             
-#include <QCompleter>           // 用于自动补全
+#include <QCompleter>           
 #include <QStringListModel> 
 
 #include "bus_route_selection.h"
 #include "BusManager.h"
 
+// 获取媒体文件的绝对路径 
 QString getMediaPath(const QString& fileName) {
     return QDir::toNativeSeparators(QCoreApplication::applicationDirPath() + "/media/" + fileName);
 }
 
-// --- 全局样式 ---
+//全局样式
 const QString GLOBAL_STYLE = R"(
     QMainWindow, QWidget {
         background-color: #FFFFFF;
@@ -62,6 +63,7 @@ const QString GLOBAL_STYLE = R"(
     }
 )";
 
+//bus_route_selection类实现
 bus_route_selection::bus_route_selection(QWidget* parent)
     : QMainWindow(parent)
 {
@@ -71,19 +73,17 @@ bus_route_selection::bus_route_selection(QWidget* parent)
     resize(900, 700);
     playBackgroundMusic();
 }
-
+//析构函数
 bus_route_selection::~bus_route_selection()
 {
 }
-
+//音频实现
 void bus_route_selection::initAudio() {
     m_bgmPlayer = new QMediaPlayer(this);
     m_bgmOutput = new QAudioOutput(this);
     m_bgmPlayer->setAudioOutput(m_bgmOutput);
     m_bgmOutput->setVolume(0.3);
     m_bgmPlayer->setLoops(QMediaPlayer::Infinite);
-
-    // [修改] 使用相对路径
     m_bgmPlayer->setSource(QUrl::fromLocalFile(getMediaPath("Background_Fragments.mp3")));
 
     m_voicePlayer = new QMediaPlayer(this);
@@ -94,6 +94,7 @@ void bus_route_selection::initAudio() {
     m_isMusicOn = true;
 }
 
+//背景音乐控制
 void bus_route_selection::playBackgroundMusic() {
     if (m_isMusicOn && m_bgmPlayer->playbackState() != QMediaPlayer::PlayingState) {
         m_bgmPlayer->play();
@@ -114,18 +115,18 @@ void bus_route_selection::toggleBgm() {
     }
     else {
         m_bgmPlayer->pause();
-        // [修改] 使用相对路径
         m_musicBtn->setIcon(QIcon(getMediaPath("music_off.png")));
         m_musicBtn->setToolTip("开启背景音乐");
     }
 }
 
+//播放语音提示
 void bus_route_selection::playVoice(const QString& fileName) { 
     m_voicePlayer->stop();
     m_voicePlayer->setSource(QUrl::fromLocalFile(getMediaPath(fileName)));
     m_voicePlayer->play();
 }
-
+//UI界面设置
 void bus_route_selection::setupUi() {
     stackedWidget = new QStackedWidget(this);
     setCentralWidget(stackedWidget);
@@ -142,10 +143,10 @@ void bus_route_selection::setupUi() {
 
     stackedWidget->setCurrentWidget(selectionPage);
 
-    m_musicBtn = new DraggableButton(this); // [修改] 使用自定义类
+	//右下角背景音乐控制按钮
+    m_musicBtn = new DraggableButton(this); 
     m_musicBtn->setFixedSize(50, 50);
     m_musicBtn->move(this->width()+60, this->height());
-    // [修改] 使用相对路径
     m_musicBtn->setIcon(QIcon(getMediaPath("music_on.png")));
     m_musicBtn->setIconSize(QSize(30, 30));
     m_musicBtn->setCursor(Qt::PointingHandCursor);
@@ -161,8 +162,9 @@ void bus_route_selection::setupUi() {
 
     connect(m_musicBtn, &QPushButton::clicked, this, &bus_route_selection::toggleBgm);
 
-    // ---  左下角 DeepSeek 聊天触发按钮 ---
-    m_chatTriggerBtn = new DraggableButton("询问 DeepSeek", this); // [修改] 使用自定义类
+
+    //左下角DeepSeek聊天触发按钮
+    m_chatTriggerBtn = new DraggableButton("询问 DeepSeek", this);
     m_chatTriggerBtn->setFixedSize(150, 40);
     m_chatTriggerBtn->move(20, this->height());
     m_chatTriggerBtn->setStyleSheet(
@@ -174,11 +176,12 @@ void bus_route_selection::setupUi() {
     );
     connect(m_chatTriggerBtn, &QPushButton::clicked, this, &bus_route_selection::toggleChat);
 
-    // -聊天窗口实体 ---
+    //聊天窗口实体
     m_chatWidget = new ChatWidget(this);
     m_chatWidget->setFixedSize(350, 500);
     m_chatWidget->hide();
 }
+//打开or关闭聊天窗口
 void bus_route_selection::toggleChat() {
     if (m_chatWidget->isVisible()) {
         m_chatWidget->hide();
@@ -191,7 +194,6 @@ void bus_route_selection::toggleChat() {
         QPoint btnPos = m_chatTriggerBtn->pos();
 
         // 计算聊天框位置：在按钮上方显示
-        // 如果按钮太靠上，可能会遮挡，这里简单处理为“显示在按钮正上方”
         int x = btnPos.x();
         int y = btnPos.y() - m_chatWidget->height() - 10;
 
@@ -205,17 +207,18 @@ void bus_route_selection::toggleChat() {
 }
 
 
+//窗口大小调整
 void bus_route_selection::resizeEvent(QResizeEvent* event) {
     QMainWindow::resizeEvent(event);
 }
 
+//选择界面UI
 void bus_route_selection::setupSelectionUi() {
     selectionPage = new QWidget();
     QVBoxLayout* layout = new QVBoxLayout(selectionPage);
 
     QLabel* logoLabel = new QLabel();
     logoLabel->setFixedSize(150, 150);
-    // [修改] 使用相对路径
     QPixmap logoPix(getMediaPath("school_badge.png"));
     if (!logoPix.isNull()) {
         logoLabel->setPixmap(logoPix.scaled(150, 150, Qt::KeepAspectRatio, Qt::SmoothTransformation));
@@ -246,6 +249,7 @@ void bus_route_selection::setupSelectionUi() {
     layout->setContentsMargins(200, 50, 200, 50);
 }
 
+//登录界面UI
 void bus_route_selection::setupLoginUi() {
     loginPage = new QWidget();
     QVBoxLayout* layout = new QVBoxLayout(loginPage);
@@ -288,10 +292,12 @@ void bus_route_selection::setupLoginUi() {
     layout->setContentsMargins(200, 20, 200, 50);
 }
 
+//页面切换函数
 void bus_route_selection::showSelectionPage() {
     stackedWidget->setCurrentWidget(selectionPage);
 }
 
+//显示普通用户登录页面
 void bus_route_selection::showUserLoginPage() {
     m_isAdminLogin = false;
     loginTitleLabel->setText("普通用户登录");
@@ -303,6 +309,7 @@ void bus_route_selection::showUserLoginPage() {
     stackedWidget->setCurrentWidget(loginPage);
 }
 
+//显示管理员登录页面
 void bus_route_selection::showAdminLoginPage() {
     m_isAdminLogin = true;
     loginTitleLabel->setText("管理员登录");
@@ -314,6 +321,7 @@ void bus_route_selection::showAdminLoginPage() {
     stackedWidget->setCurrentWidget(loginPage);
 }
 
+//登录处理函数
 void bus_route_selection::handleLogin() {
     QString user = userEdit->text().trimmed();
     QString pass = passEdit->text().trimmed();
@@ -331,17 +339,17 @@ void bus_route_selection::handleLogin() {
 
     if (isValid) {
         if (m_isAdminLogin) {
-            playVoice("admin_window.mp3"); // 替换为你的语音文件名
+            playVoice("admin_window.mp3"); 
             showAdminPanel();
         }
         else {
-            playVoice("user_window.mp3"); // 替换为你的语音文件名
+            playVoice("user_window.mp3"); 
             showUserPanel();
         }
     }
     else {
         // 验证失败
-        playVoice("login_failed.mp3"); // 建议添加一个登录失败的语音
+        playVoice("login_failed.mp3");
         QMessageBox::critical(this, "登录失败", "账号密码错误，或该账号无权访问当前模式！");
     }
 }
@@ -353,7 +361,6 @@ void bus_route_selection::handleForgotPwd() {
         QLineEdit::Normal, "", &ok);
     if (ok && !code.isEmpty()) {
         if (code == RECOVERY_CODE) {
-            // 这里不再显示密码，而是提示文件位置，因为密码可能有很多个
             QString path = QDir::toNativeSeparators(QCoreApplication::applicationDirPath() + "/users.json");
             QMessageBox::information(this, "提示", "验证通过。\n请查看程序目录下的 users.json 文件获取密码。\n路径: " + path);
         }
@@ -367,7 +374,6 @@ void bus_route_selection::setupUserUi() {
     userPage = new QWidget();
     QVBoxLayout* mainLayout = new QVBoxLayout(userPage);
 
-    // ... (Banner 图片部分保持不变) ...
     QLabel* bannerLabel = new QLabel();
     bannerLabel->setFixedHeight(110);
     bannerLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -377,7 +383,6 @@ void bus_route_selection::setupUserUi() {
         bannerLabel->setAlignment(Qt::AlignCenter);
     }
 
-    // ... (顶部栏部分保持不变) ...
     QHBoxLayout* topLayout = new QHBoxLayout();
     QLabel* welcomeMsg = new QLabel("当前用户: 普通用户");
     welcomeMsg->setStyleSheet("font-style: italic; color: #555;");
@@ -393,27 +398,25 @@ void bus_route_selection::setupUserUi() {
     startInput = new QLineEdit(); startInput->setPlaceholderText("起点站");
     endInput = new QLineEdit(); endInput->setPlaceholderText("终点站");
 
-    // --- [核心修改开始] 添加自动补全功能 ---
 
-    // 1. 从 Manager 获取所有站点
+
+    //获取所有站点
     QStringList stationList = BusManager::instance().getAllStations();
 
-    // 2. 创建补全器
+    //补全器
     QCompleter* stationCompleter = new QCompleter(stationList, this);
 
-    // 3. 设置过滤模式：MatchContains 表示只要包含这个字就提示 (输入"京"也能提示"南京站")
-    //    如果想要必须从头匹配 (输入"南"才提示"南京站")，可以用 Qt::MatchStartsWith
+    // 只要包含这个字就提示
     stationCompleter->setFilterMode(Qt::MatchContains);
 
-    // 4. 设置大小写不敏感
+    //大小写不敏感
     stationCompleter->setCaseSensitivity(Qt::CaseInsensitive);
 
-    // 5. 将补全器绑定到输入框
+    //将补全器绑定到输入框
     startInput->setCompleter(stationCompleter);
     endInput->setCompleter(stationCompleter);
 
-    // --- [核心修改结束] ---
-
+	// 查询按钮及连接槽函数
     QPushButton* searchBtn = new QPushButton("查询方案");
     connect(searchBtn, &QPushButton::clicked, this, &bus_route_selection::searchRoute);
     pathLayout->addWidget(new QLabel("从"));
@@ -422,7 +425,6 @@ void bus_route_selection::setupUserUi() {
     pathLayout->addWidget(endInput);
     pathLayout->addWidget(searchBtn);
 
-    // ... (剩下的代码保持不变) ...
     QGroupBox* lineGroup = new QGroupBox("车次查询 (查线路)");
     QHBoxLayout* lineLayout = new QHBoxLayout(lineGroup);
     lineQueryInput = new QLineEdit(); lineQueryInput->setPlaceholderText("线路号 (如: D1)");
@@ -432,6 +434,7 @@ void bus_route_selection::setupUserUi() {
     lineLayout->addWidget(lineQueryInput);
     lineLayout->addWidget(lineBtn);
 
+	// 结果显示
     resultDisplay = new QTextBrowser();
     resultDisplay->setStyleSheet("border: 2px solid #003366; background-color: #FAFAFA;");
 
@@ -442,6 +445,7 @@ void bus_route_selection::setupUserUi() {
     mainLayout->addWidget(resultDisplay);
 }
 
+//路线查询
 void bus_route_selection::searchRoute() {
     QString start = startInput->text().trimmed();
     QString end = endInput->text().trimmed();
@@ -473,7 +477,7 @@ void bus_route_selection::searchRoute() {
     for (const auto& res : results) {
         QString html;
 
-        // --- 外层容器 (强制左对齐) ---
+		//结果
         if (res.isRecommended) {
             html += QString("<div align='left' style='background-color:#E6F7FF; border:1px solid #1890FF; padding:10px; margin-bottom:10px;'>");
             html += QString("<div align='left'><b style='color:#FF0000; font-size:16px;'>【最优推荐】 方案 %1</b>").arg(index++);
@@ -486,18 +490,16 @@ void bus_route_selection::searchRoute() {
 
         html += "<ul style='margin-top:5px;'>";
 
-        // --- 遍历每一段路线 ---
+        //遍历每一段路线
         for (int i = 0; i < res.segments.size(); ++i) {
             const auto& seg = res.segments[i];
 
-            // === [核心修改] 处理返程名称显示 ===
+            //"返程"显示
             QString displayId = seg.routeId;
             if (displayId.endsWith("_REV")) {
-                // 如果 ID 是 "D1_REV"，替换为 "D1 (返程)"
                 displayId = displayId.replace("_REV", "") + " (返程)";
             }
-            // ===================================
-
+            
             html += QString("<li><b>第 %1 程:</b> 乘坐 <font color='#0078d7'><b>%2</b></font> 从 %3 到 <b>%4</b> (%5 站, %6 分钟)</li>")
                 .arg(i + 1)
                 .arg(displayId)  // 使用处理过的 displayId
@@ -514,7 +516,7 @@ void bus_route_selection::searchRoute() {
         }
         html += "</ul>";
 
-        // --- 底部统计信息 (右对齐) ---
+        //底部统计信息
         html += QString("<div align='right' style='font-weight:bold; color:#333;'>总计: %1 站 | 预计耗时: <font color='#E65100'>%2 分钟</font></div>")
             .arg(res.totalStops).arg(res.totalTime);
 
@@ -525,6 +527,7 @@ void bus_route_selection::searchRoute() {
     }
 }
 
+//路线查询
 void bus_route_selection::searchLine() {
     QString id = lineQueryInput->text().trimmed();
     auto stops = BusManager::instance().getStopsByRouteId(id);
@@ -545,14 +548,15 @@ void bus_route_selection::searchLine() {
     resultDisplay->append(html);
 }
 
+//管理员界面UI
 void bus_route_selection::setupAdminUi() {
+	//创建管理员界面
     adminPage = new QWidget();
     QVBoxLayout* layout = new QVBoxLayout(adminPage);
 
     QLabel* bannerLabel = new QLabel();
     bannerLabel->setFixedHeight(110);
     bannerLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    // [修改] 使用相对路径
     QPixmap bannerPix(getMediaPath("school_badge_name.png"));
     if (!bannerPix.isNull()) {
         bannerLabel->setPixmap(bannerPix.scaledToHeight(100, Qt::SmoothTransformation));
@@ -597,15 +601,18 @@ void bus_route_selection::setupAdminUi() {
     layout->addWidget(routeTable);
 }
 
+//显示管理员面板
 void bus_route_selection::showAdminPanel() {
     stackedWidget->setCurrentWidget(adminPage);
     refreshAdminTable();
 }
 
+//显示普通用户面板
 void bus_route_selection::showUserPanel() {
     stackedWidget->setCurrentWidget(userPage);
 }
 
+//保存新路线
 void bus_route_selection::saveNewRoute() {
     QString id = routeIdEdit->text().trimmed();
     QString stopsStr = stationsEdit->text().trimmed();
@@ -633,6 +640,7 @@ void bus_route_selection::saveNewRoute() {
     stationsEdit->clear();
 }
 
+//刷新管理员路线表格
 void bus_route_selection::refreshAdminTable() {
     auto routes = BusManager::instance().getAllRoutes();
     routeTable->setRowCount(0);

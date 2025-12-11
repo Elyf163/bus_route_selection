@@ -6,9 +6,8 @@
 #include <QJsonObject>
 #include <QFile>
 #include <QSet>
-#include <QCoreApplication> // [新增]
-#include <QDir>             // [新增]
-
+#include <QCoreApplication> 
+#include <QDir>           
 class BusManager : public QObject {
     Q_OBJECT
 
@@ -23,7 +22,6 @@ public:
     BusRoute getRouteById(const QString& id);
 
     QList<QString> getStopsByRouteId(const QString& routeId);
-    //获取所有不重复的站点名称，用于自动补全
     QList<QString> getAllStations();
     QList<RouteResult> findPath(const QString& start, const QString& end);
 

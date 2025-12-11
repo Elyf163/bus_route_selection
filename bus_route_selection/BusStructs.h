@@ -28,8 +28,8 @@ struct PathSegment {
 
 // 最终搜索结果
 struct RouteResult {
-    QList<PathSegment> segments; // 由多段组成 (直达只有1段，换乘有2段或3段)
-    int totalStops;
-    int totalTime;      // 总耗时 (含换乘等待)
-    bool isRecommended; // 是否为推荐路线
+    QList<PathSegment> segments;     // 由多段组成 (直达只有1段，换乘有2段或3段)
+	int totalStops;                 // 总停靠站数
+    int totalTime;                 // 总耗时 (含换乘等待)
+    bool isRecommended;           // 是否为推荐路线
 };

@@ -1,17 +1,19 @@
 #include "UserManager.h"
 #include <QDebug>
 
+// 获取单例实例
 UserManager& UserManager::instance() {
     static UserManager ins;
     return ins;
 }
 
+//初始化并加载用户数据
 UserManager::UserManager() {
-    // 动态获取路径：exe所在目录 + users.json
     m_jsonPath = QDir::toNativeSeparators(QCoreApplication::applicationDirPath() + "/users.json");
     loadUsers();
 }
 
+//从users.json加载用户数据
 void UserManager::loadUsers() {
     QFile file(m_jsonPath);
     if (!file.open(QIODevice::ReadOnly)) {
@@ -36,6 +38,7 @@ void UserManager::loadUsers() {
     file.close();
 }
 
+// 验证用户
 bool UserManager::verifyUser(const QString& username, const QString& password, const QString& role) {
     // 遍历内存中的列表，查找匹配项
     for (const auto& user : m_users) {

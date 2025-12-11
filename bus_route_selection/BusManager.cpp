@@ -1,22 +1,24 @@
+//寻路算法实现
 #include "BusManager.h"
 #include <QQueue>
 #include <QSet>
 #include <algorithm>
 #include <QDebug>
 
+//单例模式
 BusManager& BusManager::instance() {
     static BusManager ins;
     return ins;
 }
 
+//构造函数，加载路线数据
 BusManager::BusManager() {
-    // [核心修改] 动态获取 exe 所在目录 + routes.json
-    // QDir::toNativeSeparators 用于自动处理 Windows 的反斜杠问题
     m_jsonPath = QDir::toNativeSeparators(QCoreApplication::applicationDirPath() + "/routes.json");
-
     loadRoutes();
 }
 
+
+//添加路径
 void BusManager::addRoute(const BusRoute& route) {
     for (int i = 0; i < m_routes.size(); ++i) {
         if (m_routes[i].routeId == route.routeId) {
@@ -28,6 +30,8 @@ void BusManager::addRoute(const BusRoute& route) {
     saveRoutes();
 }
 
+
+//将路径保存至routes.json
 void BusManager::saveRoutes() {
     QJsonArray arr;
     for (const auto& r : m_routes) {
@@ -46,8 +50,6 @@ void BusManager::saveRoutes() {
         arr.append(obj);
     }
     QJsonDocument doc(arr);
-
-    // [修改] 使用动态路径 m_jsonPath
     QFile file(m_jsonPath);
     if (file.open(QIODevice::WriteOnly)) {
         file.write(doc.toJson());
@@ -55,10 +57,10 @@ void BusManager::saveRoutes() {
     }
 }
 
+//从routes.json加载路径，并生成返程路线
 void BusManager::loadRoutes() {
     QFile file(m_jsonPath);
     if (!file.open(QIODevice::ReadOnly)) return;
-
     m_routes.clear();
     QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
     QJsonArray arr = doc.array();
@@ -76,26 +78,23 @@ void BusManager::loadRoutes() {
         m_routes.append(r);
     }
 
-    // 2. [新增] 自动生成返程路线
-    QList<BusRoute> reverseRoutes; // 临时存一下，防止遍历时修改容器导致迭代器失效
+	// 生成返程路线,从而实现双向路线选择
+
+    QList<BusRoute> reverseRoutes; // 反向路线寄存
 
     for (const auto& originalRoute : m_routes) {
-        // 如果已经是自动生成的返程路线，就跳过，防止无限循环
+        // 跳过自动生成路线
         if (originalRoute.routeId.endsWith("_REV")) continue;
 
         BusRoute revRoute;
-        // 1. 设置 ID，例如 "D1" 变成 "D1_REV"
+        // 设置反向ID(加上“_REV”后缀)
         revRoute.routeId = originalRoute.routeId + "_REV";
 
-        // 2. 设置首末班时间 (返程通常也是这个时间，或者你可以倒过来)
+        //设置首末班时间
         revRoute.firstBus = originalRoute.firstBus;
         revRoute.lastBus = originalRoute.lastBus;
 
-        // 3. 反转站点
-        // 原本: A(0) -> B(5) -> C(15)
-        // 目标: C(0) -> B(10) -> A(15) 
-        // 算法: 新的累积时间 = 总时间 - 原本该站的时间
-
+        //反转站点
         int totalTime = originalRoute.stations.last().timeFromStart; // 总耗时
 
         // 从后往前遍历原路线
@@ -103,8 +102,7 @@ void BusManager::loadRoutes() {
             Station s = originalRoute.stations[i];
 
             // 计算新的累积时间
-            // 例如 C站原为15，Total 15。新时间 = 15 - 15 = 0
-            // 例如 B站原为5， Total 15。新时间 = 15 - 5 = 10
+            // 新的累积时间 = 总时间 - 原本该站的时间
             int newTime = totalTime - s.timeFromStart;
 
             revRoute.stations.append({ s.name, newTime });
@@ -113,20 +111,22 @@ void BusManager::loadRoutes() {
         reverseRoutes.append(revRoute);
     }
 
-    // 3. 将生成的返程路线合并到主列表中
+    //将生成的返程路线合并
     for (const auto& r : reverseRoutes) {
-        addRoute(r); // 假设你有一个 addRoute 函数将路线加入 m_routes 和 map
+        addRoute(r); 
     }
 }
 
-// ... 下面的函数保持不变 ...
+//获取所有路线
 QList<BusRoute> BusManager::getAllRoutes() const { return m_routes; }
 
+//根据ID获取路线
 BusRoute BusManager::getRouteById(const QString& id) {
     for (const auto& r : m_routes) if (r.routeId == id) return r;
     return BusRoute();
 }
 
+//根据路线ID获取站点名称列表
 QList<QString> BusManager::getStopsByRouteId(const QString& routeId) {
     QList<QString> list;
     for (const auto& r : m_routes) {
@@ -138,6 +138,7 @@ QList<QString> BusManager::getStopsByRouteId(const QString& routeId) {
     return list;
 }
 
+//根据站点名称获取包含该站点的所有路线
 QList<BusRoute> BusManager::getRoutesByStation(const QString& stationName) {
     QList<BusRoute> list;
     for (const auto& r : m_routes) {
@@ -151,19 +152,21 @@ QList<BusRoute> BusManager::getRoutesByStation(const QString& stationName) {
     return list;
 }
 
+//寻路算法（BFS+剪枝）
 QList<RouteResult> BusManager::findPath(const QString& start, const QString& end) {
     QList<RouteResult> results;
-    if (start == end) return results;
-
+	if (start == end) return results;   // 起点终点相同，直接返回空结果
+	// BFS 队列节点结构
     struct SearchNode {
-        QString currentStation;
-        QList<PathSegment> history;
-        QSet<QString> visitedRoutes;
+		QString currentStation;             // 当前站点
+		QList<PathSegment> history;         // 历史路径段
+		QSet<QString> visitedRoutes;        // 已访问路线ID集合
     };
-
+	// BFS 队列
     QQueue<SearchNode> queue;
-
+	// 初始化队列：从起点出发的所有可能路径段
     QList<BusRoute> startRoutes = getRoutesByStation(start);
+	// 将起点的所有可能路径段加入队列
     for (const auto& route : startRoutes) {
         int startIdx = -1;
         for (int i = 0; i < route.stations.size(); ++i) if (route.stations[i].name == start) startIdx = i;
@@ -187,12 +190,14 @@ QList<RouteResult> BusManager::findPath(const QString& start, const QString& end
             queue.enqueue(node);
         }
     }
-
+	// 最大换乘次数限制为3，结合实际情况，避免过多换乘
     const int MAX_SEGMENTS = 3;
 
+	// BFS 主循环
     while (!queue.isEmpty()) {
+		// 取出队列头节点
         SearchNode current = queue.dequeue();
-
+		// 如果到达终点，记录路径结果
         if (current.currentStation == end) {
             RouteResult res;
             res.segments = current.history;
@@ -210,9 +215,9 @@ QList<RouteResult> BusManager::findPath(const QString& start, const QString& end
             results.append(res);
             continue;
         }
-
+		// 超过最大换乘次数，剪枝
         if (current.history.size() >= MAX_SEGMENTS) continue;
-
+		// 扩展当前节点的下一步路径
         QList<BusRoute> nextRoutes = getRoutesByStation(current.currentStation);
         for (const auto& route : nextRoutes) {
             if (current.visitedRoutes.contains(route.routeId)) continue;
@@ -243,6 +248,7 @@ QList<RouteResult> BusManager::findPath(const QString& start, const QString& end
         }
     }
 
+	// 去除重复路径（相同路线ID序列）
     for (int i = 0; i < results.size(); ++i) {
         for (int j = i + 1; j < results.size(); ) {
             bool samePath = true;
@@ -258,7 +264,7 @@ QList<RouteResult> BusManager::findPath(const QString& start, const QString& end
             else ++j;
         }
     }
-
+	// 按总耗时排序，标记推荐路径
     std::sort(results.begin(), results.end(), [](const RouteResult& a, const RouteResult& b) {
         return a.totalTime < b.totalTime;
         });

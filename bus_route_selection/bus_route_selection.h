@@ -9,20 +9,12 @@
 #include <QGroupBox>
 #include <QFormLayout>
 #include <QPushButton>
-
-// 引入多媒体模块
 #include <QMediaPlayer>
 #include <QAudioOutput>
 #include <QUrl>
 #include <QResizeEvent> 
-
-// 需要引入鼠标事件
 #include <QMouseEvent> 
-
-// 引入聊天组件
 #include "ChatWidget.h"
-
-//用户数据管理
 #include "UserManager.h"
 
 
@@ -39,7 +31,7 @@ protected:
             // 记录偏移量 = 鼠标全局位置 - 按钮左上角位置
             m_dragOffset = event->globalPosition().toPoint() - this->frameGeometry().topLeft();
         }
-        QPushButton::mousePressEvent(event); // 保留点击功能
+        QPushButton::mousePressEvent(event); 
     }
 
     // 鼠标移动：更新按钮位置
@@ -47,7 +39,6 @@ protected:
         if (m_isDragging && (event->buttons() & Qt::LeftButton)) {
             // 新位置 = 当前鼠标全局位置 - 初始偏移量
             this->move(event->globalPosition().toPoint() - m_dragOffset);
-
             // 阻止事件继续传播，防止触发点击
             return;
         }
@@ -78,7 +69,6 @@ public:
     const QString RECOVERY_CODE = "Elysia"; // 找回码
 
 protected:
-    // [注意] 确保这里只有这一行 resizeEvent 声明
     void resizeEvent(QResizeEvent* event) override;
 
 private slots:
