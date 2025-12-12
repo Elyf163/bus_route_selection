@@ -22,7 +22,7 @@ public:
     ~ChatWidget();
 
     //API与URL
-    const QString API_KEY = "sk-f9db67db1d404e3085b1ff8078bbdab1";
+    const QString API_KEY = "XX-XXXXXXXXXXXXXXXXXXXXXXXX";
     const QString API_URL = "https://api.deepseek.com/chat/completions";
 
 
