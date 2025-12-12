@@ -19,6 +19,6 @@
 
 5：BGM播放，语音播报与图片显示，媒体文件放置在media目录下，均使用相对路径
 
-6：添加DeepSeek聊天助手（API已初始化为已初始化为xx-xxxxxxxxxxxxxxxxxxxxxxxxxx，直接运行会报错“API 请求失败: Host requires authentication”，想使用需自行去Deepseek官网申请，并在ChatWidget.h中修改）
+6：添加DeepSeek聊天助手（API已初始化为已初始化为xx-xxxxxxxxxxxxxxxxxxxxxxxxxx，使用聊天助手会报错“API 请求失败: Host requires authentication”，想使用需自行去Deepseek官网申请，并在ChatWidget.h中修改）
 
 PS:我的任务完成了，欢迎各位学弟学妹借鉴并继续完善改进，能整成直接发布的版本就好玩了（doge)
